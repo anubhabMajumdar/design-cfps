@@ -61,6 +61,25 @@ subnet-topology: 10.0.0.1/24,10.10.0.1/24;10.20.0.1/24
 * If source and destination IP belongs to `10.20.0.1/24`, route natively
 * Else, preserve current behavior (encapsulate if being routed to know CIDRs/pass to Linux stack).
 
+### Datapath implementation
+
+This section provides an overview of the datapath implementation. Consider the current implementation - as long as nodes have IP connectivity, Cilium can route traffic, both intra-cluster and inter-cluster (in case of cluster mesh). 
+
+#### Case 1
+
+If `hybrid` mode is enabled without configuring any `subnet-topology`, routing mode will behave exactly same as encapsulation mode. Pod IPs can be from overlay or from a subnet, it will be encapsulated either way. So datapath implementation would be exactly as it is today for encapsulation routing mode.
+
+#### Case 2
+
+If `subnet-topology` is configured, the CIDR ranges can be configured as part of node configs, similar to [IPv4PodSubnets](https://github.com/cilium/cilium/blob/f78aca7b5dff52e6d07723f6577dd0d3f913fea6/pkg/datapath/types/node.go#L177).
+
+Similar to how masquerade uses `NativeRoutingCIDRIPv4` to check if [SNAT is needed](https://github.com/cilium/cilium/blob/f78aca7b5dff52e6d07723f6577dd0d3f913fea6/bpf/lib/nat.h#L713), this implementation would add a similar function that can check source and destination address against multiple CIDRs. However, in this case, since we will be storing multiple CIDRs, we will use an eBPF map of type `BPF_MAP_TYPE_LPM_TRIE` to efficiently search the map. 
+
+Next, while making routing decision today, in both `lxc` and `host` eBPF programs, a check is made to see if tunneling should be done. This implementation would add an extra check to tunneling decision. The check would use above function to figure out if native routing can be done. 
+- If yes, we skip tunneling and the packet is instead sent to Linux stack for handling, where the underlying networking would route the packet to destination. 
+- If no, tunneling happens exactly as it works today 
+
+Above behavior simply optimizes current encapsulation behavior, without introducing major change to how encapsulation routing works/behaves. 
 
 ## Impacts / Key Questions
 
