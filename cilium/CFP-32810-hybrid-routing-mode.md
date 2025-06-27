@@ -27,12 +27,9 @@ With higher adoption in cluster mesh and large scale clusters being common to su
 
 * Retain the behavior of current routing modes as-is
 * Allow users to set a new routing mode called `hybrid`
-* Allow users to pass in network topologies expressed through CIDR ranges during start-up
+* Allow users to pass in network topologies expressed as CIDR ranges through configmap
 * Support for both IPV4 and IPV6
-
-## Non-Goals
-
-* Allow dynamic update to CIDR ranges (update without restart)
+* Allow dynamic configuration of CIDRs (add/remove) without agent restart (update w/o agent restart)
 
 ## Proposal
 
@@ -60,6 +57,10 @@ subnet-topology: 10.0.0.1/24,10.10.0.1/24;10.20.0.1/24
 * `10.0.0.1/24` and `10.10.0.1/24` are connected and traffic can be natively routed
 * If source and destination IP belongs to `10.20.0.1/24`, route natively
 * Else, preserve current behavior (encapsulate if being routed to know CIDRs/pass to Linux stack).
+
+### Control plane implementation
+
+Similar to dynamic flowlogs or Hubble dynamic exporter, allow users to configure the CIDRs on the fly through a configmap. The configmap will be mounted on each agent. On create/update, update `LocalNodeConfig` and trigger dataplane reconcile.
 
 ### Datapath implementation
 
@@ -92,11 +93,3 @@ Given that today Cilium is encapsulating packets that could be natively routed, 
 In a highly fragmented network topography, lookup of IP to make routing decision may not be negligible.
 
 ## Future Milestones
-
-### Deferred Milestone 1
-
-Allow dynamic configuration of CIDRs (add/remove) without agent restart.
-
-### Deferred Milestone 2
-
-Configure the subnets though a custom resource.
