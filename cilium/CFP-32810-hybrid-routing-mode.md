@@ -68,7 +68,7 @@ This section provides an overview of the datapath implementation. Consider the c
 
 #### Case 1
 
-If `hybrid` mode is enabled without configuring any `subnet-topology`, routing mode will behave exactly same as encapsulation mode. Pod IPs can be from overlay or from a subnet, it will be encapsulated either way. So datapath implementation would be exactly as it is today for encapsulation routing mode.
+If `hybrid` mode is enabled without configuring any `subnet-topology`, it will behave the same as `tunnel` mode. Pod IPs can be from the overlay or from a subnet, traffic will be encapsulated either way. So datapath implementation would be exactly as it is today for the `tunnel` routing mode.
 
 #### Case 2
 
